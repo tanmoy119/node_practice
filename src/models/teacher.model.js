@@ -46,6 +46,13 @@ teacherSchema.pre("save", async function (next){
     console.log(this.password);
     next();
 })
+
+
+teacherSchema.methods.comparePassword= async function(password){
+    const isPasswordMatch = await bcrypt.compare(password, this.password);
+    return isPasswordMatch;
+
+}
 const teacher= new model("teacher", teacherSchema);
 
 module.exports = teacher; 

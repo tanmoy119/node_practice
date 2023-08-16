@@ -84,24 +84,24 @@ const getTeacher = async (req,res,next)=>{
  
 const loginTeacher = async (req,res,next)=>{
     try {
-        const {name,age,gender,email,password} = req.body;
-        const {value,error} = teacherValidationObject.validate({name,age,gender,email,password}); 
+        const {email,password} = req.body;
+     
+        const isTeacher = await teacherModel.findOne({email:email});
 
-        if(error){
-            return res.status(400).json({error:true,message:"Validation failed",err:error.details[0].message});
+        if(!isTeacher){
+            return res.status(404).json({error:true,message:"No Teacher found  with this id!!"});
+        }
+        
+        const isPasswordMatch = await isTeacher.comparePassword(password);
+
+        if(isPasswordMatch){
+            return res.status(201).json({error:false,message:"Login Successfull"});
         }
         else{
-        const isTeacher = await teacherModel.findOne({email:value.email});
+            return res.status(401).json({error:true,message:"Invalid details"});
 
-        if(!isTeacher)
-        {
-            const Teacher = await teacherModel.create(value);
-            return res.status(201).json({error:false,message:"Teacher Added successfully",data:{name:Teacher.name,
-            age:Teacher.age,gender:Teacher.gender,email:Teacher.email}});
         }
 
-        res.status(403).json({error:true,message:"Teacher already exist!!"})
-    }
     } catch (error) {
         next(error);
     }
