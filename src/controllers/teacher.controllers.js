@@ -1,6 +1,8 @@
 const teacherModel = require("../models/teacher.model");
 const Joi = require('joi');
 const bcrypt = require('bcryptjs');
+const { sendMail } = require("../mailer/mail");
+
 
 //! Create  Joy validation object -------------
 const teacherValidationObject = Joi.object({
@@ -30,6 +32,10 @@ const teacherValidationObject = Joi.object({
         "string.min":"password should contains atlist 6 characters",
         "string.max":"password should contains maximum 15 charactors",
         "string.empty":"password is mandatory"
+    }),
+    otp: Joi.number().required().messages({
+        "number.base":"otp must be string",
+        "number.empty":"otp is mandatory"
     })
 
 })
@@ -40,8 +46,9 @@ const teacherValidationObject = Joi.object({
 const registerTeacher = async (req,res,next)=>{
     try {
         const {name,age,gender,email,password} = req.body;
-        const {value,error} = teacherValidationObject.validate({name,age,gender,email,password}); 
-
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        console.log(typeof(otp));
+        const {value,error} = teacherValidationObject.validate({name,age,gender,email,password,otp}); 
         if(error){
             return res.status(400).json({error:true,message:"Validation failed",err:error.details[0].message});
         }
@@ -52,6 +59,8 @@ const registerTeacher = async (req,res,next)=>{
         {
             const Teacher = await new teacherModel(value);
             const saveTeacher = await Teacher.save();
+            //!send mail--------------
+            sendMail(value.email,value.name,value.otp);
             return res.status(201).json({error:false,message:"Teacher Added successfully",data:{name:saveTeacher.name,
             age:saveTeacher.age,gender:saveTeacher.gender,email:saveTeacher.email}});
         }
@@ -107,6 +116,57 @@ const loginTeacher = async (req,res,next)=>{
     }
 }
 
+//! verify otp---------------
+const verifyOtp = async (req,res,next)=>{
+    try {
+      const {email,otp} = req.body;
+        const Teacher = await teacherModel.findOne({email});
+        if(Teacher){
+
+            const isOtpMatch = await Teacher.compareOtp(otp);
+            if(isOtpMatch){
+                const udata = await teacherModel.findOneAndUpdate({_id:Teacher._id},{verify:true});
+
+                return res.status(200).json({error:false,message:"Teachers verified successfully",data:udata});
+            }
+            else{
+                return res.status(404).json({error:true,message:"Invalid OTP !!"});
+            }
+        }
+        
+
+        res.status(404).json({error:true,message:"No Teacher found !!"});
+    }
+     catch (error) {
+        next(error);
+    }
+}
+
+
+// const sendMail = async (req,res,next)=>{
+//     try {
+
+//         const {email} = req.body;
+
+        
+
+//           res.status(200).json({error:false,message:"message send successfully"});
+
+        
+//     } catch (error) {
+//         next(error);
+//     }
+// }
+
+
+
+
+// <p>Dear,<br>We thank you for your registration at Netflix Online streaming platforms</p><br/><p>Your user id is :${email}<p/><p>Your email id Verification OTP code is :</p><h1></h1><p>Warm Regards,<br/>
+//             Customer Care<br/>
+//             Internet Ticketing<br/>
+//             NETFLIX<br/><br/>
+//             * Terms & Conditions Apply
+//             </p>
 
 
 // const addTeacher = async (req, res, next)=>{
@@ -189,7 +249,9 @@ const loginTeacher = async (req,res,next)=>{
 module.exports = {
     registerTeacher,
     getTeacher,
-    loginTeacher
+    loginTeacher,
+    sendMail,
+    verifyOtp
 
 }
 
