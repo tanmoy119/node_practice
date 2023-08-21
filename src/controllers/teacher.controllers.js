@@ -7,35 +7,35 @@ const { sendMail } = require("../mailer/mail");
 //! Create  Joy validation object -------------
 const teacherValidationObject = Joi.object({
     name: Joi.string().min(4).max(20).required().messages({
-        "string.base":"Name must be string",
-        "string.min":"Name should contains atlist 4 characters",
-        "string.max":"Name should contains maximum 20 charactors",
-        "string.empty":"Name is mandatory"
+        "string.base": "Name must be string",
+        "string.min": "Name should contains atlist 4 characters",
+        "string.max": "Name should contains maximum 20 charactors",
+        "string.empty": "Name is mandatory"
     }),
     age: Joi.number().min(24).max(50).required().messages({
-        "number.base":"age must be number",
-        "number.min":"age should be graterthan or equal 24 ",
-        "number.max":"age should be maximum 50 ",
-        "number.empty":"age is mandatory"
+        "number.base": "age must be number",
+        "number.min": "age should be graterthan or equal 24 ",
+        "number.max": "age should be maximum 50 ",
+        "number.empty": "age is mandatory"
     }),
     gender: Joi.string().required().messages({
-        "string.base":"gender must be string",
-        "string.empty":"gender is mandatory"
+        "string.base": "gender must be string",
+        "string.empty": "gender is mandatory"
     }),
     email: Joi.string().email().required().messages({
-        "string.base":"Email must be string",
-        "string.empty":"Email is mandatory",
-        "string.email":"Your input should be email"
+        "string.base": "Email must be string",
+        "string.empty": "Email is mandatory",
+        "string.email": "Your input should be email"
     }),
     password: Joi.string().min(6).max(15).required().messages({
-        "string.base":"password must be string",
-        "string.min":"password should contains atlist 6 characters",
-        "string.max":"password should contains maximum 15 charactors",
-        "string.empty":"password is mandatory"
+        "string.base": "password must be string",
+        "string.min": "password should contains atlist 6 characters",
+        "string.max": "password should contains maximum 15 charactors",
+        "string.empty": "password is mandatory"
     }),
     otp: Joi.number().required().messages({
-        "number.base":"otp must be string",
-        "number.empty":"otp is mandatory"
+        "number.base": "otp must be string",
+        "number.empty": "otp is mandatory"
     })
 
 })
@@ -43,71 +43,74 @@ const teacherValidationObject = Joi.object({
 
 
 //! Teacher register -----------------------
-const registerTeacher = async (req,res,next)=>{
+const registerTeacher = async (req, res, next) => {
     try {
-        const {name,age,gender,email,password} = req.body;
+        const { name, age, gender, email, password } = req.body;
         const otp = Math.floor(100000 + Math.random() * 900000);
-        console.log(typeof(otp));
-        const {value,error} = teacherValidationObject.validate({name,age,gender,email,password,otp}); 
-        if(error){
-            return res.status(400).json({error:true,message:"Validation failed",err:error.details[0].message});
+        console.log(typeof (otp));
+        const { value, error } = teacherValidationObject.validate({ name, age, gender, email, password, otp });
+        if (error) {
+            return res.status(400).json({ error: true, message: "Validation failed", err: error.details[0].message });
         }
-        else{
-        const isTeacher = await teacherModel.findOne({email:value.email});
+        else {
+            const isTeacher = await teacherModel.findOne({ email: value.email });
 
-        if(!isTeacher)
-        {
-            const Teacher = await new teacherModel(value);
-            const saveTeacher = await Teacher.save();
-            //!send mail--------------
-            sendMail(value.email,value.name,value.otp);
-            return res.status(201).json({error:false,message:"Teacher Added successfully",data:{name:saveTeacher.name,
-            age:saveTeacher.age,gender:saveTeacher.gender,email:saveTeacher.email}});
+            if (!isTeacher) {
+                const Teacher = await new teacherModel(value);
+                const saveTeacher = await Teacher.save();
+                //!send mail--------------
+                sendMail(value.email, value.name, value.otp);
+                return res.status(201).json({
+                    error: false, message: "Teacher Added successfully", data: {
+                        name: saveTeacher.name,
+                        age: saveTeacher.age, gender: saveTeacher.gender, email: saveTeacher.email
+                    }
+                });
+            }
+
+            res.status(403).json({ error: true, message: "Teacher already exist with this email!!" })
         }
-
-        res.status(403).json({error:true,message:"Teacher already exist with this email!!"})
-    }
     } catch (error) {
         next(error);
     }
 }
 
 //!Get all the Teachers  ------------------
-const getTeacher = async (req,res,next)=>{
+const getTeacher = async (req, res, next) => {
     try {
-      
-        const Teachers = await teacherModel.find({},{password:0});
-        if(Teachers){
-            return res.status(200).json({error:false,message:"Teachers find successfully",data:Teachers});
-        }
-        
 
-        res.status(404).json({error:true,message:"No Teacher found !!"});
+        const Teachers = await teacherModel.find({}, { password: 0 });
+        if (Teachers) {
+            return res.status(200).json({ error: false, message: "Teachers find successfully", data: Teachers });
+        }
+
+
+        res.status(404).json({ error: true, message: "No Teacher found !!" });
     }
-     catch (error) {
+    catch (error) {
         next(error);
     }
 }
 
 //! Teacher Login--------------
- 
-const loginTeacher = async (req,res,next)=>{
-    try {
-        const {email,password} = req.body;
-     
-        const isTeacher = await teacherModel.findOne({email:email});
 
-        if(!isTeacher){
-            return res.status(404).json({error:true,message:"No Teacher found  with this id!!"});
+const loginTeacher = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        const isTeacher = await teacherModel.findOne({ email: email });
+
+        if (!isTeacher) {
+            return res.status(404).json({ error: true, message: "No Teacher found  with this id!!" });
         }
-        
+
         const isPasswordMatch = await isTeacher.comparePassword(password);
 
-        if(isPasswordMatch){
-            return res.status(201).json({error:false,message:"Login Successfull"});
+        if (isPasswordMatch) {
+            return res.status(201).json({ error: false, message: "Login Successfull" });
         }
-        else{
-            return res.status(401).json({error:true,message:"Invalid details"});
+        else {
+            return res.status(401).json({ error: true, message: "Invalid details" });
 
         }
 
@@ -117,27 +120,27 @@ const loginTeacher = async (req,res,next)=>{
 }
 
 //! verify otp---------------
-const verifyOtp = async (req,res,next)=>{
+const verifyOtp = async (req, res, next) => {
     try {
-      const {email,otp} = req.body;
-        const Teacher = await teacherModel.findOne({email});
-        if(Teacher){
+        const { email, otp } = req.body;
+        const Teacher = await teacherModel.findOne({ email });
+        if (Teacher) {
 
             const isOtpMatch = await Teacher.compareOtp(otp);
-            if(isOtpMatch){
-                const udata = await teacherModel.findOneAndUpdate({_id:Teacher._id},{verify:true});
+            if (isOtpMatch) {
+                const udata = await teacherModel.findOneAndUpdate({ _id: Teacher._id }, { verify: true });
 
-                return res.status(200).json({error:false,message:"Teachers verified successfully",data:udata});
+                return res.status(200).json({ error: false, message: "Teachers verified successfully", data: udata });
             }
-            else{
-                return res.status(404).json({error:true,message:"Invalid OTP !!"});
+            else {
+                return res.status(404).json({ error: true, message: "Invalid OTP !!" });
             }
         }
-        
 
-        res.status(404).json({error:true,message:"No Teacher found !!"});
+
+        res.status(404).json({ error: true, message: "No Teacher found !!" });
     }
-     catch (error) {
+    catch (error) {
         next(error);
     }
 }
@@ -148,11 +151,11 @@ const verifyOtp = async (req,res,next)=>{
 
 //         const {email} = req.body;
 
-        
+
 
 //           res.status(200).json({error:false,message:"message send successfully"});
 
-        
+
 //     } catch (error) {
 //         next(error);
 //     }
@@ -187,7 +190,7 @@ const verifyOtp = async (req,res,next)=>{
 //         const gdata = await teacherModel.find();
 //         if(!gdata){
 //             return res.status(404).json({error:true,messsage:"No Teacher found !!",data:null});
-          
+
 //         }
 //         res.status(201).json({error:false,messsage:"Teacher Find successfully!!",data:gdata});
 //     } catch (error) {
@@ -202,7 +205,7 @@ const verifyOtp = async (req,res,next)=>{
 //         const gdata = await teacherModel.findById(id);
 //         if(!gdata){
 //             return res.status(404).json({error:true,messsage:"No Teacher found !!",data:null});
-          
+
 //         }
 //        return res.status(200).json({error:false,messsage:"Teacher found successfully!!",data:gdata});
 //     } catch (error) {
