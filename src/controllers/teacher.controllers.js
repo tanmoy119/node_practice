@@ -3,6 +3,8 @@ const Joi = require('joi');
 const bcrypt = require('bcryptjs');
 const { sendMail } = require("../mailer/mail");
 
+const jwt = require("jsonwebtoken");
+
 
 //! Create  Joy validation object -------------
 const teacherValidationObject = Joi.object({
@@ -79,6 +81,20 @@ const registerTeacher = async (req, res, next) => {
 const getTeacher = async (req, res, next) => {
     try {
 
+        let authToken = req.headers.authorization;
+        console.log(authToken);
+
+
+        if(!authToken || !authToken.startsWith("Bearer"))
+        {
+            return res.status(500).json({error:true,message:"Token Required"})
+        }
+         authToken = authToken.split(" ");
+        //  console.log(authToken[1]); 
+
+        let isVerified =  jwt.verify(`${authToken}`,"tanmoy1234");
+        console.log(isVerified);
+
         const Teachers = await teacherModel.find({}, { password: 0 });
         if (Teachers) {
             return res.status(200).json({ error: false, message: "Teachers find successfully", data: Teachers });
@@ -107,7 +123,10 @@ const loginTeacher = async (req, res, next) => {
         const isPasswordMatch = await isTeacher.comparePassword(password);
 
         if (isPasswordMatch) {
-            return res.status(201).json({ error: false, message: "Login Successfull" });
+            //! Creating The JWT token 
+
+             const token = jwt.sign({email:isTeacher.email,name:isTeacher.name},"tanmoy1234");
+            return res.status(201).json({ error: false, message: "Login Successfull" ,token});
         }
         else {
             return res.status(401).json({ error: true, message: "Invalid details" });
@@ -144,6 +163,8 @@ const verifyOtp = async (req, res, next) => {
         next(error);
     }
 }
+
+
 
 
 // const sendMail = async (req,res,next)=>{
