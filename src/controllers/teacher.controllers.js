@@ -81,23 +81,11 @@ const registerTeacher = async (req, res, next) => {
 const getTeacher = async (req, res, next) => {
     try {
 
-        let authToken = req.headers.authorization;
-        console.log(authToken);
-
-
-        if(!authToken || !authToken.startsWith("Bearer"))
-        {
-            return res.status(500).json({error:true,message:"Token Required"})
-        }
-         authToken = authToken.split(" ");
-        //  console.log(authToken[1]); 
-
-        let isVerified =  jwt.verify(`${authToken}`,"tanmoy1234");
-        console.log(isVerified);
+        const {name,email} = req.user;
 
         const Teachers = await teacherModel.find({}, { password: 0 });
         if (Teachers) {
-            return res.status(200).json({ error: false, message: "Teachers find successfully", data: Teachers });
+            return res.status(200).json({ error: false, message: "Teachers find successfully", data: Teachers, user:{name,email} });
         }
 
 
@@ -125,7 +113,7 @@ const loginTeacher = async (req, res, next) => {
         if (isPasswordMatch) {
             //! Creating The JWT token 
 
-             const token = jwt.sign({email:isTeacher.email,name:isTeacher.name},"tanmoy1234");
+             const token = jwt.sign({email:isTeacher.email,name:isTeacher.name},process.env.JWT_KEY,{expiresIn:'1m'});
             return res.status(201).json({ error: false, message: "Login Successfull" ,token});
         }
         else {
@@ -164,6 +152,32 @@ const verifyOtp = async (req, res, next) => {
     }
 }
 
+//! ReSend Otp 
+
+const resendOtp = async (req,res,next)=>{
+    try {
+        const {name,email} = req.user;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        let salt=await bcrypt.genSalt(10)
+        const newotp = await bcrypt.hash(otp,salt );
+        console.log(newotp)
+        const teacher = await teacherModel.findOneAndUpdate({email},{otp:newotp},{new:true});
+        console.log(teacher);
+        if(teacher){
+
+            sendMail(email,name,otp);
+            return res.status(200).json({ error: false, message: "mail send successfully", data: teacher, user:{name,email} });
+
+        }
+
+    } catch (err) {
+        next(err);
+    }
+}
+
+
+
+//runValidator
 
 
 
@@ -275,7 +289,8 @@ module.exports = {
     getTeacher,
     loginTeacher,
     sendMail,
-    verifyOtp
+    verifyOtp,
+    resendOtp
 
 }
 

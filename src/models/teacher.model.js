@@ -50,11 +50,18 @@ const teacherSchema = new Schema({
 )
 
 teacherSchema.pre("save", async function (next){
+    if(this.isModified("otp")){
+        let salt=await bcrypt.genSalt(10)
+        this.otp = await bcrypt.hash(this.otp, salt);
+    }
+    else if(this.isModified("password")){
+
+        this.password = await bcrypt.hash(this.password, 10);
+    }
     console.log(this.password)
     console.log(this.otp)
     console.log("ji")
-    this.password = await bcrypt.hash(this.password, 10);
-    this.otp = await bcrypt.hash(this.otp, 10);
+  
     console.log(this.password);
     console.log(this.otp);
     next();
