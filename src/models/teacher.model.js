@@ -82,6 +82,8 @@ teacherSchema.methods.compareOtp= async function(otp){
     return isOtpMatch;
 
 }
+
+
 const teacher= new model("teacher", teacherSchema);
 
 module.exports = teacher; 
